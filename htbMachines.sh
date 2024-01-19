@@ -59,8 +59,22 @@ function updateFiles ()
       rm bundle.js && mv bundle_temp.js bundle.js
     fi
   fi
-
-  tput cnorm # cursor normal mode 
+  
+  tput cnorm # cursor normal mode
+  
+  echo -e "\nDo you want to convert the source text to ascii text whitout accent? (You may experiment incompatibility with some arguments if your keyboard layout don't let you add accents)\n"
+  while true; do
+    read -p "Do you want to convert the source text to ascii text whitout accent?(y/n): " answer
+    case "$answer" in
+      [Yy]* )
+        iconv -f utf-8 -t ascii//TRANSLIT bundle.js | sponge bundle.js
+        break;;
+      [Nn]* )
+        exit 0;;
+      * )
+        echo -e "\n[+] Please answer with y/n, should be lower case.\n"
+    esac
+  done
 }
 
 # Check if the argument exist un the source file
@@ -117,8 +131,9 @@ function getMachineDiffculty ()
 
    if checkPattern $machineDifficulty; then
     echo -e "\n[+] List of machines with difficulty: $machineDifficulty\n"
-    echo -e "\n${blueColour}$(grep -i "\"$machineDifficulty\"" bundle.js -B 5 | grep "name: " | awk 'NF{print $NF}' | tr -d '"' | tr -d ',' | column)${endColour}\n"
-    #grep -i "dificultad: \"$machineDifficulty\"" bundle.js -B 5 | grep "name: " | awk 'NF{print $NF}' | tr -d '"' | tr -d ',' | column
+    #iconv -f utf-8 -t ascii//TRANSLIT bundle.js > bundle_temp.js
+    grep -i "\"$machineDifficulty\"" -B 5 bundle.js | grep "name: " | awk 'NF{print $NF}' | tr -d '"' | tr -d ',' | column
+    #echo -e "\n${blueColour}$(grep -i "\"$machineDifficulty\"" <(iconv -f utf-8 -t ascii//TRANSLIT bundle.js) -B 5 | grep "name: " | awk 'NF{print $NF}' | tr -d '"' | tr -d ',' | column)${endColour}\n"
    else
     echo -e "\n[!] Difficulty not found in machines!\n"
    fi
