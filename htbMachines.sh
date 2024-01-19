@@ -34,47 +34,63 @@ function helpPanel ()
   echo -e "\t${purpleColour}[>] h)${endColour} ${grayColour}Show help panel.${endColour}"
 }
 
-# updateing files or download sources
+# change file to equivalent ascii without accents
+function changeFile ()
+{
+  # Changing file with accents to equivalent without accents
+  echo -e "\n${purpleColour}[?]${endColour} ${grayColour}Do you want to convert the source text to ascii text whitout accent?${endColour} ${yellowColour}(You may experiment incompatibility with some arguments if your keyboard layout don't let you add accents)${endColour}\n"
+  while true; do
+     read -p "[?] Do you want to make the conversion?(y/n): " answer
+     case "$answer" in
+       [Yy]*)
+         iconv -f utf-8 -t ascii//TRANSLIT bundle_original.js > bundle.js
+         echo -e "\n${greenColour}[*] Successful conversion!${endColour}\n"
+         break;;
+       [Nn]*)
+         cp bundle_original.js bundle.js
+         echo -e "\n${grayColour}[X] Source not converted...${endColour}\n"
+         break;;
+       *)
+         echo -e "\n${redColour}[!] Please answer with y or n.${endColour}\n"
+    esac
+  done 
+}
+
+# updating files or download sources
 function updateFiles ()
 {
   tput civis # hide cursor
 
-  if [ ! -f bundle.js ]; then
+  if [ ! -f bundle_original.js ]; then
     echo -e "\n${greenColour}[+]${endColour} ${grayColour}Downloading source for search engine...${endColour}\n"
-    curl -s $main_url > bundle.js
-    js-beautify bundle.js | sponge bundle.js
+    curl -s $main_url > bundle_original.js
+    js-beautify bundle_original.js | sponge bundle_original.js
     echo -e "\n${greenColour}[+]${endColour} ${grayColour}All sources downloaded${endColour}" 
+    tput cnorm # cursor
+    changeFile
   else
     echo -e "\n${greenColour}[+]${endColour} ${grayColour}Checking for updates...${endColour}\n"
     curl -s $main_url > bundle_temp.js
     js-beautify bundle_temp.js | sponge bundle_temp.js
     md5_temp_value=$(md5sum bundle_temp.js | awk '{print $1}') # hash bundle_temp.js
-    md5_original_value=$(md5sum bundle.js | awk '{print $1}') # hash bundle.js
+    md5_original_value=$(md5sum bundle_original.js | awk '{print $1}') # hash bundle.js
 
     if [ "$md5_temp_value" == "$md5_original_value" ]; then
       echo -e "\n${redColour}[!]${endColour} ${grayColour}No updates found!${endColour}\n"
       rm -r bundle_temp.js
     else
       echo -e "\n${greenColour}[+]${endColour} ${grayColour}Updates found... Sources updated${endColour}\n"
-      rm bundle.js && mv bundle_temp.js bundle.js
+      rm bundle_original.js && mv bundle_temp.js bundle_original.js
+      
+      tput cnorm # cursor normal mode
+
+      changeFile
+      
     fi
   fi
   
   tput cnorm # cursor normal mode
-  
-  echo -e "\nDo you want to convert the source text to ascii text whitout accent? (You may experiment incompatibility with some arguments if your keyboard layout don't let you add accents)\n"
-  while true; do
-    read -p "Do you want to convert the source text to ascii text whitout accent?(y/n): " answer
-    case "$answer" in
-      [Yy]* )
-        iconv -f utf-8 -t ascii//TRANSLIT bundle.js | sponge bundle.js
-        break;;
-      [Nn]* )
-        exit 0;;
-      * )
-        echo -e "\n[+] Please answer with y/n, should be lower case.\n"
-    esac
-  done
+   
 }
 
 # Check if the argument exist un the source file
@@ -82,7 +98,7 @@ function checkPattern ()
 {
   pattern="$1"
   # taking pattern from string, silent mode -q, case sensitive -i
-  grep -qi "$pattern" bundle.js
+  grep -qFi "$pattern" bundle.js
   # status (0 suceed/1 error)
   return $?
 }
@@ -106,11 +122,11 @@ function searchIP ()
 {
   ipAddress="$1"
 
-  if checkPattern $ipAddress; then
+  if checkPattern "$ipAddress"; then
     echo -e "\n${greenColour}[+]${endColour} ${grayColour}The IP address: $ipAddress coresponds to machine: ${endColour}\n"
     echo -e "${blueColour}$(grep "ip: \"$ipAddress\"" -B 3 bundle.js | grep "name: " | awk 'NF{print $NF}' | tr -d '"' | tr -d ',')${endColour}\n"
   else
-    echo -e "\n${redColour}[!]${endColour} ${grayColour}IP address not found!${endColour}\n"
+    echo -e "\n${redColour}[!]${endColour} ${grayColour}IP address not found or invalid!${endColour}\n"
   fi
 }
 
@@ -130,12 +146,12 @@ function getMachineDiffculty ()
    machineDifficulty="$1"
 
    if checkPattern $machineDifficulty; then
-    echo -e "\n[+] List of machines with difficulty: $machineDifficulty\n"
+    echo -e "\n${greenColour}[+]${endColour} ${grayColour}List of machines with difficulty: $machineDifficulty${endColour}\n"
     #iconv -f utf-8 -t ascii//TRANSLIT bundle.js > bundle_temp.js
-    grep -i "\"$machineDifficulty\"" -B 5 bundle.js | grep "name: " | awk 'NF{print $NF}' | tr -d '"' | tr -d ',' | column
+    echo -e "${blueColour}$(grep -i "\"$machineDifficulty\"" -B 5 bundle.js | grep "name: " | awk 'NF{print $NF}' | tr -d '"' | tr -d ',' | column)${endColour}"
     #echo -e "\n${blueColour}$(grep -i "\"$machineDifficulty\"" <(iconv -f utf-8 -t ascii//TRANSLIT bundle.js) -B 5 | grep "name: " | awk 'NF{print $NF}' | tr -d '"' | tr -d ',' | column)${endColour}\n"
    else
-    echo -e "\n[!] Difficulty not found in machines!\n"
+    echo -e "\n${redColour}[!]${endColour} ${grayColour}Difficulty not found in machines!${endColour}\n"
    fi
 }
 
