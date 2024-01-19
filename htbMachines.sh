@@ -31,7 +31,8 @@ function helpPanel ()
   echo -e "\t${purpleColour}[>] i)${endColour} ${grayColour}Search IP address in data base: -i \"[ip-address]\"${endColour}"
   echo -e "\t${purpleColour}[>] y)${endColour} ${grayColour}Getting machine solution link: -y \"[machine-name]\"${endColour}"
   echo -e "\t${purpleColour}[>] d)${endColour} ${grayColour}List machines by difficulty: -d "[machine-difficulty]"${endColour}"
-  echo -e "\t${purpleColour}[>] h)${endColour} ${grayColour}Show help panel.${endColour}"
+  echo -e "\t${purpleColour}[>] o)${endColour} ${grayColour}List machines by OS: -o "[machine-os]"${endColour}"
+  echo -e "\t${purpleColour}[H] h)${endColour} ${grayColour}Show help panel.${endColour}"
 }
 
 # change file to equivalent ascii without accents
@@ -155,17 +156,32 @@ function getMachineDiffculty ()
    fi
 }
 
+# Filter by OS
+function getMachineOS ()
+{
+  os="$1"
+
+  if checkPattern $os; then
+    echo -e "\n${grayColour}Listing machines by OS:${endColour} ${purpleColour}$os${endColour}\n"
+    echo -e "${blueColour}$(grep -i "\"$os\"" bundle.js -B 5 | grep "name: " | tr -d '",' | awk 'NF{print $NF}' | column)${endColour}"
+  else
+    echo -e "\n${redColour}[!]${endColour} ${grayColour}OS not found in machines or invalid!${endColour}\n"
+    
+  fi
+}
+
 # indicators
 declare -i parameter_counter=0
 
 # menu setting variables state
-while getopts "m:i:y:d:hu" param; do
+while getopts "m:i:y:d:o:hu" param; do
   case $param in
     m) machineName="$OPTARG"; let parameter_counter+=1;;
     u) let parameter_counter+=2;;
     i) ipAddress="$OPTARG"; let parameter_counter+=3;;
     y) machineName="$OPTARG"; let parameter_counter+=4;;
     d) difficulty="$OPTARG"; let parameter_counter+=5;;
+    o) os="$OPTARG"; let parameter_counter+=6;;
     h) ;;
   esac
 done
@@ -181,6 +197,8 @@ elif [ $parameter_counter -eq 4 ]; then
   getYoutubeLink $machineName
 elif [ $parameter_counter -eq 5 ]; then
   getMachineDiffculty $difficulty
+elif [ $parameter_counter -eq 6 ]; then
+  getMachineOS $os
 else
   helpPanel
 fi
