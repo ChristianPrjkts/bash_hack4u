@@ -32,7 +32,9 @@ function helpPanel ()
   echo -e "\t${purpleColour}[>] y)${endColour} ${grayColour}Getting machine solution link: -y \"[machine-name]\"${endColour}"
   echo -e "\t${purpleColour}[>] d)${endColour} ${grayColour}List machines by difficulty: -d "[machine-difficulty]"${endColour}"
   echo -e "\t${purpleColour}[>] o)${endColour} ${grayColour}List machines by OS: -o "[machine-os]"${endColour}"
-  echo -e "\t${purpleColour}[H] h)${endColour} ${grayColour}Show help panel.${endColour}"
+  echo -e "\t${purpleColour}[>] o)${endColour} ${grayColour}List machines by skills: -s "[skills]"${endColour}"
+  echo -e "\t${purpleColour}[H] h)${endColour} ${grayColour}Show help panel.${endColour}\n"
+  echo -e "\t${purpleColour}[*] ${endColour} ${yellowColour}You can combine two parameters: -d "[difficulty]" -o "[os]"${endColour}"
 }
 
 # change file to equivalent ascii without accents
@@ -170,18 +172,51 @@ function getMachineOS ()
   fi
 }
 
+# difficulty and os, double parameters
+function getOSDifficulty ()
+{
+  difficulty="$1"
+  os="$2"
+
+  if checkPattern $difficulty; then
+    if checkPattern $os; then
+      echo -e "\n${greenColour}[+]${endColour} ${grayColour}Listing machines with difficulty $difficulty and OS $os:${endColour}\n"
+      echo -e "${blueColour}$(grep -i "\"$os\"" bundle.js -C 4 | grep -i "\"$difficulty\"" -B 5 | grep "name: " | tr -d '",' | awk 'NF{print $NF}' | column)${endColour}"
+    else
+      echo -e "\n${redColour}[!]${endColour} ${grayColour}OS not found in machines or invalid!${endColour}\n"
+    fi
+  else
+    echo -e "\n${redColour}[!]${endColour} ${grayColour}Difficulty not found in machines!${endColour}\n"
+  fi
+}
+
+function getSkill ()
+{
+  skill="$1"
+
+  if checkPattern "$skill" && grep -i "skills:" bundle.js | grep -i "$skill" &> /dev/null; then
+    echo -e "${greenColour}[+]${endColour} ${grayColour}Listing machines by skill: $skill${endColour}"
+    echo -e "${blueColour}$(grep -i "skills:" bundle.js -B 6 | grep -i "$skill" -B 6 | grep "name:" | tr -d '",' | awk 'NF{print $NF}' | column)${endColour}"
+  else
+    echo -e "\n${redColour}[!]${endColour} ${grayColour}Skill not found or invalid!${endColour}\n"
+  fi
+}
+
 # indicators
 declare -i parameter_counter=0
+declare -i flag_difficulty=0
+declare -i flag_os=0
 
 # menu setting variables state
-while getopts "m:i:y:d:o:hu" param; do
+while getopts "m:i:y:d:o:s:hu" param; do
   case $param in
     m) machineName="$OPTARG"; let parameter_counter+=1;;
     u) let parameter_counter+=2;;
     i) ipAddress="$OPTARG"; let parameter_counter+=3;;
     y) machineName="$OPTARG"; let parameter_counter+=4;;
-    d) difficulty="$OPTARG"; let parameter_counter+=5;;
-    o) os="$OPTARG"; let parameter_counter+=6;;
+    d) difficulty="$OPTARG"; flag_difficulty=1; let parameter_counter+=5;;
+    o) os="$OPTARG"; flag_os=1; let parameter_counter+=6;;
+    s) skill="$OPTARG"; let parameter_counter+=7;;
     h) ;;
   esac
 done
@@ -199,6 +234,10 @@ elif [ $parameter_counter -eq 5 ]; then
   getMachineDiffculty $difficulty
 elif [ $parameter_counter -eq 6 ]; then
   getMachineOS $os
+elif [ $flag_difficulty -eq 1 ] && [ $flag_os -eq 1 ]; then
+  getOSDifficulty $difficulty $os
+elif [ $parameter_counter -eq 7 ]; then
+  getSkill "$skill" # in double-quotes to catch string
 else
   helpPanel
 fi
